@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>🌾 Paddy Advisor</title>
+<style>
+  :root{
+    --earth:#7a5a2a;
+    --leaf:#2e7d32;
+    --leaf-2:#4caf50;
+    --sun:#f6c144;
+    --card:#fff;
+    --muted:#556070;
+    --glass:rgba(255,255,255,0.85);
+    --shadow: 0 6px 18px rgba(15,23,42,0.08);
+  }
+
+  /* Layout + Base */
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: linear-gradient(135deg,#f6fff2 0%, #fffaf0 100%);
+    color:#102027;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1100px;margin:18px auto;padding:20px;}
+
+  /* Header */
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{
+    width:56px;height:56px;border-radius:12px;background:linear-gradient(180deg,var(--leaf),var(--leaf-2));
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:22px;box-shadow:var(--shadow);
+  }
+  h1{margin:0;font-size:20px;color:var(--leaf);letter-spacing:0.2px}
+  .lang-toggle{display:flex;gap:8px}
+  .lang-toggle button{
+    background:transparent;border:2px solid rgba(0,0,0,0.06);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:700;
+    transition:transform .18s, background .18s, color .18s;
+  }
+  .lang-toggle button.active{background:var(--leaf);color:#fff;border-color:var(--leaf)}
+  .lang-toggle button:active{transform:scale(.98)}
+
+  /* Grid */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:14px;
+  }
+
+  /* Card */
+  .card{
+    background:var(--card);
+    border-radius:14px;
+    padding:14px;
+    box-shadow:var(--shadow);
+    transition:transform .2s, box-shadow .2s;
+    border:1px solid rgba(16,32,39,0.03);
+  }
+  .card:hover{transform:translateY(-6px);box-shadow:0 10px 30px rgba(16,32,39,0.08)}
+  label{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--earth);margin-bottom:8px}
+  .label-icon{width:34px;height:34px;border-radius:8px;background:#fff8ec;display:inline-flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,0.04);}
+
+  select, input[type="text"], .multiselect{
+    width:100%;padding:10px;border-radius:10px;border:1px solid #e6edf0;background:linear-gradient(180deg,#ffffff,#fbfff9);
+    font-size:14px;color:#0b1a1a;
+  }
+  .multiselect{height:110px;overflow:auto;padding:8px}
+
+  /* Actions */
+  .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .btn{
+    border:none;padding:12px 14px;border-radius:12px;font-weight:800;cursor:pointer;font-size:14px;
+    box-shadow:0 6px 18px rgba(16,32,39,0.06);
+  }
+  .btn.primary{background:linear-gradient(90deg,var(--leaf),var(--leaf-2));color:#fff}
+  .btn.ghost{background:transparent;border:1px solid rgba(16,32,39,0.06);color:var(--leaf)}
+  .btn.secondary{background:linear-gradient(90deg,var(--sun),#ffd86b);color:#4a2f08}
+
+  /* Results area */
+  .results{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:18px}
+  @media(max-width:900px){.results{grid-template-columns:1fr}}
+  .result-card{background:var(--card);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+  .result-card h3{margin:0 0 10px;color:var(--leaf);font-size:18px}
+  .section{margin-bottom:12px;padding:10px;border-radius:10px;background:linear-gradient(180deg,#fff,#fbfff6);border-left:6px solid var(--leaf-2)}
+  .section.hi{border-left-color:var(--sun);background:linear-gradient(180deg,#fffdf6,#fff9e6)}
+  .section h4{margin:0 0 8px;font-size:15px;color:#204028}
+  ul{margin:0;padding-left:18px;color:#123}
+  li{margin-bottom:6px}
+
+  .summary{background:linear-gradient(180deg,#fffaf0,#fff8ec);padding:12px;border-radius:10px;border-left:6px solid var(--earth);font-weight:700;color:#3b2a1a}
+  .small{color:var(--muted);font-size:13px}
+  .notes{font-size:13px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px dashed rgba(16,32,39,0.04)}
+
+  /* Tiny helper */
+  .muted{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">PA</div>
+        <div>
+          <h1 id="title">🌾 Paddy Advisor</h1>
+          <div class="muted" id="subtitle">Interactive farmer guidance (English / ଓଡ଼ିଆ)</div>
+        </div>
+      </div>
+
+      <div class="lang-toggle" role="tablist">
+        <button id="btn-en" class="active" aria-pressed="true">English</button>
+        <button id="btn-or">ଓଡ଼ିଆ</button>
+      </div>
+    </header>
+
+    <!-- Selection area -->
+    <div class="grid" id="selectors">
+      <div class="card">
+        <label><span class="label-icon">🌤️</span><span id="lblWeather">Weather Condition</span></label>
+        <select id="selWeather" aria-label="Weather">
+          <!-- populated by JS -->
+        </select>
+        <div class="small" id="suggWeather"></div>
+      </div>
+
+      <div class="card">
+        <label><span class="label-icon">🧪</span><span id="lblSoil">Soil pH</span></label>
+        <select id="selSoil" aria-label="Soil pH"></select>
+        <div class="small" id="suggSoil"></div>
+      </div>
+
+      <div class="card">
+        <label><span class="label-icon">🌿</span><span id="lblOrganic">Organic Matter</span></label>
+        <select id="selOrganic" aria-label="Organic Matter"></select>
+        <div class="small" id="suggOrganic"></div>
+      </div>
+
+      <div class="card">
+        <label><span class="label-icon">⚗️</span><span id="lblNutrient">Nutrient Deficiency</span></label>
+        <select id="selNutrient" aria-label="Nutrient"></select>
+        <div class="small" id="suggNutrient"></div>
+      </div>
+
+      <div class="card">
+        <label><span class="label-icon">🌾</span><span id="lblStage">Stage of Paddy</span></label>
+        <select id="selStage" aria-label="Stage"></select>
+        <div class="small" id="suggStage"></div>
+      </div>
+
+      <div class="card">
+        <label><span class="label-icon">🐞</span><span id="lblPests">Observed Pests / Diseases</span></label>
+        <!-- multi-select list -->
+        <div class="multiselect" id="selPests" role="listbox" aria-multiselectable="true">
+          <!-- checkboxes populated in JS -->
+        </div>
+        <div class="small" id="suggPests">Choose any pests/diseases you see (or none).</div>
+
+        <div class="actions" style="margin-top:12px">
+          <button id="btnRecommend" class="btn primary">Show Recommendations</button>
+          <button id="btnClear" class="btn ghost">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results" role="region" aria-label="Recommendations area">
+      <div class="result-card" id="resultMain">
+        <h3 id="resTitle">Recommendations</h3>
+        <div id="resContent" class="small">Fill inputs and click <b>Show Recommendations</b>.</div>
+      </div>
+
+      <aside class="result-card" id="resultSide" aria-label="Summary">
+        <h3 id="sideTitle">Summary</h3>
+        <div id="resSummary" class="summary">No selection yet.</div>
+        <div class="notes" id="safetyNotes"></div>
+      </aside>
+    </div>
+  </div>
+
+<script>
+/* ============================
+   BILINGUAL DATA: English + Odia
+   ============================ */
+const DATA = {
+  en: {
+    title: "🌾 Paddy Advisor",
+    subtitle: "Interactive farmer guidance (English / Odia)",
+    labels: {
+      weather: "Weather Condition",
+      soil: "Soil pH",
+      organic: "Organic Matter",
+      nutrient: "Nutrient Deficiency",
+      stage: "Stage of Paddy",
+      pests: "Observed Pests / Diseases"
+    },
+    options: {
+      weather: ["-- Select --","Hot & Dry","Flooded","Raining","Normal","Moderate"],
+      soil: ["-- Select --","Acidic (pH < 5.5)","Neutral (pH 5.5–7.0)","Alkaline (pH > 7.0)"],
+      organic: ["-- Select --","Low","Medium","High"],
+      nutrient: ["-- Select --","None","Nitrogen","Phosphorus","Potassium","Zinc","Iron"],
+      stage: ["-- Select --","Nursery (0–25 DAS)","Vegetative","Tillering (30–60 DAS)","Panicle Initiation (60–100 DAS)","Flowering","Grain Filling (100–130 DAS)","Maturity (Harvesting)"]
+    },
+    pestList: ["None","Brown Planthopper (BPH)","Stem Borer","Rice Blast","Bacterial Leaf Blight"],
+    tips: {
+      weather: {
+        "Hot & Dry": "Increase irrigation frequency; mulch to conserve moisture; irrigate mornings/evenings; foliar micronutrient spray if stressed.",
+        "Flooded": "Stop irrigation, open drains, watch for root and fungal problems; repair bunds to control flow.",
+        "Raining": "Prioritize drainage, reduce standing water, scout for fungal/bacterial diseases after rains.",
+        "Normal": "Follow regular irrigation schedule and watch for pests.",
+        "Moderate": "Standard care: irrigation, weeding and scouting."
+      },
+      soil: {
+        "Acidic (pH < 5.5)": "Consider lime application; test for Al toxicity; add organic matter.",
+        "Neutral (pH 5.5–7.0)": "Good range — maintain organic matter.",
+        "Alkaline (pH > 7.0)": "Apply organic matter or sulfur to reduce pH; check Zn availability."
+      }
+    },
+    rec: {
+      pests: {
+        "Brown Planthopper (BPH)": {
+          prevention: ["Avoid excessive N fertilization","Maintain intermittent drainage","Use resistant varieties where available"],
+          control: ["Light/pheromone traps","Apply Imidacloprid or Buprofezin (follow label)","Avoid repeated heavy N applications"]
+        },
+        "Stem Borer": {
+          prevention: ["Destroy stubbles and egg masses","Maintain field sanitation"],
+          control: ["Pheromone traps","Apply Cartap or other recommended insecticides per label"]
+        },
+        "Rice Blast": {
+          prevention: ["Use resistant varieties","Avoid excessive dense planting","Good drainage"],
+          control: ["Spray Tricyclazole at early signs","Fungicide as recommended"]
+        },
+        "Bacterial Leaf Blight": {
+          prevention: ["Use resistant varieties","Avoid excessive nitrogen","Sanitation"],
+          control: ["Copper oxychloride sprays as per label","Follow integrated management"]
+        }
+      },
+      irrigationByStage: {
+        "Nursery (0–25 DAS)": "Maintain 2–3 cm water in nursery beds; do not stress seedlings.",
+        "Vegetative": "Maintain shallow water; manage weeds.",
+        "Tillering (30–60 DAS)": "Maintain ~2–5 cm water; split N application; scout for stem borer/BPH.",
+        "Panicle Initiation (60–100 DAS)": "Keep steady moisture; apply P & K; avoid sudden drought.",
+        "Flowering": "Maintain ~5 cm water; avoid spraying systemic insecticides during flowering hours.",
+        "Grain Filling (100–130 DAS)": "Keep soil moist until dough stage; prepare to drain 7–10 days before harvest.",
+        "Maturity (Harvesting)": "Drain field 7–10 days before harvest; avoid harvesting wet crop."
+      },
+      fertilizerByStage: {
+        "Basal": "Apply 50% N (as basal share), full P (100% recommended), 50% K as basal dose.",
+        "Tillering": "Apply 25% N + 25% K at tillering (top-dress).",
+        "Panicle": "Apply remaining 25% N + 25% K at panicle initiation."
+      },
+      nutrientFixes: {
+        "Nitrogen": "Top-dress urea in small split doses depending on stage.",
+        "Phosphorus": "Apply DAP or SSP at basal application.",
+        "Potassium": "Use MOP at basal and topdress as needed.",
+        "Zinc": "Soil apply ZnSO4 25 kg/ha or foliar ZnSO4 0.5%.",
+        "Iron": "Apply FeSO4 locally and improve water management."
+      },
+      cultural: [
+        "Mulching to retain moisture (esp. Hot & Dry).",
+        "Weeding at early stage (use cono-weeder or manual removal).",
+        "Maintain bunds and drainage channels.",
+        "Use pheromone/light traps for pests."
+      ],
+      safety: [
+        "Do not spray systemic insecticides during flowering hours.",
+        "Follow label rates for chemicals and wear PPE.",
+        "Avoid excessive nitrogen in wet conditions (increases BPH risk)."
+      ],
+      dailyRoadmapExample: {
+        "Nursery (0–25 DAS)": ["Day 1–3: Seed treatment & sowing","Day 4–15: Maintain 2–3 cm water; scout for pests","Day 16–25: Start hardening (reduce water before transplant)"],
+        "Tillering (30–60 DAS)": ["Day 1: Top-dress part of N","Days 2–10: Weeding","Days 11–30: Monitor stem borer/BPH; install pheromone traps"]
+      }
+    }
+  },
+
+  or: {
+    title: "🌾 ଧାନ ସହାୟକ",
+    subtitle: "ଇଣ୍ଟରାକ୍ଟିଭ୍ ଫାର୍ମର୍ ଗାଇଡ୍ (English / ଓଡ଼ିଆ)",
+    labels: {
+      weather: "ଆବହା (Weather)",
+      soil: "ମାଟି pH",
+      organic: "ଜୀବାଣୁ ପଦାର୍ଥ (Organic Matter)",
+      nutrient: "ପୋଷକ ଅଭାବ",
+      stage: "ଧାନର ଅବସ୍ଥା",
+      pests: "ଦେଖାଯାଉଥିବା କୀଟ/ରୋଗ"
+    },
+    options: {
+      weather: ["-- ବାଛନ୍ତୁ --","ତାପମାନ ଓ ଶୁଷ୍କ","ବନ୍ୟା (Flooded)","ବର୍ଷା (Raining)","ସାଧାରଣ (Normal)","ମଧ୍ୟମ (Moderate)"],
+      soil: ["-- ବାଛନ୍ତୁ --","ଅମ୍ଳୀୟ (pH < 5.5)","ସାଧାରଣ (pH 5.5–7.0)","କ୍ଷାରୀୟ (pH > 7.0)"],
+      organic: ["-- ବାଛନ୍ତୁ --","କମ୍","ମଧ୍ୟମ","ଉଚ୍ଚ"],
+      nutrient: ["-- ବାଛନ୍ତୁ --","କିଛି ନାହିଁ","ନାଇଟ୍ରୋଜେନ","ଫସଫୋରସ୍","ପୋଟାସିୟମ୍","ଜିଙ୍କ୍","ଲୋହା"],
+      stage: ["-- ବାଛନ୍ତୁ --","ଚାରା (0–25 ଦିନ)","ବୃଦ୍ଧି (Vegetative)","ଟିଲରିଂ (30–60 ଦିନ)","ପାନିକଲ ଆରମ୍ଭ (60–100 ଦିନ)","ଫୁଲିବା (Flowering)","ଧାନ ପୂରଣ (100–130 ଦିନ)","ପକ୍କ (Maturity)"]
+    },
+    pestList: ["କିଛି ନୁହେଁ","ବ୍ରାଉନ୍ ପ୍ଲାଣ୍ଟହପର୍ (BPH)","ଷ୍ଟେମ୍ ବୋରର୍","ଧାନ ବ୍ଲାଷ୍ଟ","ବ୍ୟାକ୍ଟେରିଆଲ୍ ଲିଫ୍ ବ୍ଲାଇଟ୍"],
+    tips:{
+      weather:{
+        "ତାପମାନ ଓ ଶୁଷ୍କ":"ସିଚାଇ ବଢାନ୍ତୁ; ମଲ୍ଚିଂ ବ୍ୟବହାର କରନ୍ତୁ; ସକାଳ/ସନ୍ଧ୍ୟାରେ ସିଚାଇ କରନ୍ତୁ; ମାଇକ୍ରୋନ୍ୟୁଟ୍ରିଏଣ୍ଟ ଫୋଲିଆର୍ ଦିଅନ୍ତୁ।",
+        "ବନ୍ୟା (Flooded)":"ସିଚାଇ ବନ୍ଦ କରନ୍ତୁ; ଡ୍ରେନ୍ ଖୋଲନ୍ତୁ; ଫଙ୍ଗସ୍ ରୋଗ ପାଇଁ ଯାଞ୍ଚ କରନ୍ତୁ।",
+        "ବର୍ଷା (Raining)":"ଡ୍ରେନେଜ୍ ବଢ଼ାନ୍ତୁ; ଗୋଟିଏ ତାଲିକା ପରେ ଫଙ୍ଗସ୍/ବ୍ୟାକ୍ଟେରିଆ ଯାଞ୍ଚ କରନ୍ତୁ।",
+        "ସାଧାରଣ (Normal)":"ସାଧାରଣ ପାଣି ବ୍ୟବସ୍ଥା ପାଳନ କରନ୍ତୁ।",
+        "ମଧ୍ୟମ (Moderate)":"ସାଧାରଣ ଧ୍ୟାନ: ସିଚାଇ, ଜାତୀୟ କାର୍ଯ୍ୟ।"
+      },
+      soil:{
+        "ଅମ୍ଳୀୟ (pH < 5.5)":"ଚୁନ୍ ପ୍ରୟୋଗ ବିଚାର କରନ୍ତୁ; Al ଯାଞ୍ଚ କରନ୍ତୁ।",
+        "ସାଧାରଣ (pH 5.5–7.0)":"ଧାନ ପାଇଁ ଭଲ; OM ରଖନ୍ତୁ।",
+        "କ୍ଷାରୀୟ (pH > 7.0)":"ଜୀବାମୃତ କିମ୍ବା ଗନ୍ଧକ ଯୋଗ କରନ୍ତୁ; Zn ଚେକ୍ କରନ୍ତୁ।"
+      },
+    },
+    rec: {
+      // translations of rec.* from English to Odia
+      pests: {
+        "ବ୍ରାଉନ୍ ପ୍ଲାଣ୍ଟହପର୍ (BPH)": {
+          prevention: ["ଅତି N ଦିଅନ୍ତୁ ନାହିଁ","ପାଣି ମଧୟରେ ଡ୍ରେନ୍ ରଖନ୍ତୁ","ପ୍ରତିରୋଧୀ ପ୍ରଜାତି ବ୍ୟବହାର କରନ୍ତୁ"],
+          control: ["Light/pheromone traps ବ୍ୟବହାର କରନ୍ତୁ","Imidacloprid କିମ୍ବା Buprofezin (ଲେବେଲ ପାଳନ)","ଅତି N ଦିଅନ୍ତୁ ନାହିଁ"]
+        },
+        "ଷ୍ଟେମ୍ ବୋରର୍": {
+          prevention: ["ଷ୍ଟବ/ଇନ୍ଦ୍ରୁଗତ/ଡେବ୍ରି ଧ୍ବଂସ କରନ୍ତୁ","ଫିଲ୍ଡ ସାଫ୍ ରଖନ୍ତୁ"],
+          control: ["pheromone traps","Cartap ପ୍ରୟୋଗ (ଲେବେଲ ଅନୁସରଣ)"]
+        },
+        "ଧାନ ବ୍ଲାଷ୍ଟ": {
+          prevention: ["ପ୍ରତିରୋଧୀ ପ୍ରଜାତି ବ୍ୟବହାର","ଘନ ଲଗାଣି ନକରନ୍ତୁ","ଭଲ ଡ୍ରେନେଜ୍"],
+          control: ["Tricyclazole ଛିଟକାନା କରନ୍ତୁ","ଫଙ୍ଗସାଇଡ୍ ବ୍ୟବହାର କରନ୍ତୁ"]
+        },
+        "ବ୍ୟାକ୍ଟେରିଆଲ୍ ଲିଫ୍ ବ୍ଲାଇଟ୍": {
+          prevention: ["ପ୍ରତିରୋଧୀ ପ୍ରଜାତି ବ୍ୟବହାର","ଅତି N ଦିଅନ୍ତୁ ନାହିଁ","ସଂରକ୍ଷଣ"],
+          control: ["Copper oxychloride ପ୍ରୟୋଗ","ଇଣ୍ଟିଗ୍ରେଟେଡ୍ ପ୍ରବନ୍ଧନ"]
+        }
+      },
+      irrigationByStage: {
+        "ଚାରା (0–25 ଦିନ)":"ଚାରା ବେଡରେ 2–3 ସେ.ମି. ପାଣି ରଖନ୍ତୁ।",
+        "ବୃଦ୍ଧି (Vegetative)":"ଆଲୋକିକ ପାଣି; ନିରାଇ କରନ୍ତୁ।",
+        "ଟିଲରିଂ (30–60 ଦିନ)":"~2–5 ସେ.ମି ପାଣି; N ଭାଗେ ଭାଗେ ।",
+        "ପାନିକଲ ଆରମ୍ଭ (60–100 ଦିନ)":"ନିରନ୍ତର ପାଣି ଧରନ୍ତୁ; P & K ଦିଅନ୍ତୁ।",
+        "ଫୁଲିବା (Flowering)":"~5 ସେ.ମି ପାଣି ରଖନ୍ତୁ; ଫୁଲିବା ସମୟରେ systemic insecticide ନକରନ୍ତୁ।",
+        "ଧାନ ପୂରଣ (100–130 ଦିନ)":"ଆଟା ପର୍ଯ୍ୟନ୍ତ ପାଣି ଧରନ୍ତୁ; 7–10 ଦିନ ପୂର୍ବରୁ ଖାଲି କରନ୍ତୁ।",
+        "ପକ୍କ (Maturity)":"କଟାଣ ପୂର୍ବରୁ 7–10 ଦିନ ଫିଲ୍ଡ ଖାଲି କରନ୍ତୁ।"
+      },
+      fertilizerByStage: {
+        "Basal":"50% N, 100% P, 50% K (ମୂଳ ଖୁଣ୍ଡରେ)।",
+        "Tillering":"25% N + 25% K (ଟିଲରିଂରେ)।",
+        "Panicle":"ଶେଷ 25% N + 25% K (ପାନିକଲରେ)।"
+      },
+      nutrientFixes: {
+        "ନାଇଟ୍ରୋଜେନ":"ଭାଗେ ଭାଗେ urea ଟପ୍ ଡ୍ରେସ୍ କରନ୍ତୁ।",
+        "ଫସଫୋରସ୍":"DAP/SSP ବେସାଲରେ ଦିଅନ୍ତୁ।",
+        "ପୋଟାସିୟମ୍":"MOP ବ୍ୟବହାର କରନ୍ତୁ।",
+        "ଜିଙ୍କ୍":"ZnSO4 25 kg/ha କିମ୍ବା 0.5% foliar spray।",
+        "ଲୋହା":"FeSO4 ଆବଶ୍ୟକ ଅନୁସାରେ।"
+      },
+      cultural: [
+        "ମଲ୍ଚିଂ (ଶୁଷ୍କ ଦିନରେ ରକ୍ଷା)।",
+        "ଅରମ୍ଭିକ କିଟାବାଟି: N ନିୟନ୍ତ୍ରଣ।",
+        "ବନ୍ଧ/ଡ୍ରେନ୍ ଠିକ୍ ରଖନ୍ତୁ।",
+        "pheromone/light traps ବ୍ୟବହାର କରନ୍ତୁ।"
+      ],
+      safety: [
+        "ଫୁଲିବା ସମୟରେ systemic insecticide ଛିଟକାନା ନକରନ୍ତୁ।",
+        "ରାସାୟନ ପ୍ରୟୋଗ ପାଇଁ PPE ପିନ୍ଧନ୍ତୁ।",
+        "ଭର୍ଷା ସମୟରେ ଅତି ନ ଦିଅନ୍ତୁ — BPH ବଢ଼ିପାରେ।"
+      ],
+      dailyRoadmapExample: {
+        "ଚାରା (0–25 ଦିନ)":["ଦିନ 1–3: ବୀଜ ଚିକିତ୍ସା ଓ ସେଡିଂ","ଦିନ 4–15: 2–3 ସେ.ମି. ପାଣି ରଖନ୍ତୁ; ଖୋଜ କରନ୍ତୁ","ଦିନ 16–25: ହାର୍ଡେନିଂ (ପୋତନ ପୂର୍ବରୁ)"]
+      }
+    }
+  }
+};
+
+/* ====================
+   UI Wiring + Behavior
+   ==================== */
+let LANG='en'; // default
+
+// Elements map
+const E = {
+  title: document.getElementById('title'),
+  subtitle: document.getElementById('subtitle'),
+  btnEn: document.getElementById('btn-en'),
+  btnOr: document.getElementById('btn-or'),
+  selWeather: document.getElementById('selWeather'),
+  selSoil: document.getElementById('selSoil'),
+  selOrganic: document.getElementById('selOrganic'),
+  selNutrient: document.getElementById('selNutrient'),
+  selStage: document.getElementById('selStage'),
+  selPests: document.getElementById('selPests'),
+  suggWeather: document.getElementById('suggWeather'),
+  suggSoil: document.getElementById('suggSoil'),
+  suggOrganic: document.getElementById('suggOrganic'),
+  suggNutrient: document.getElementById('suggNutrient'),
+  suggStage: document.getElementById('suggStage'),
+  suggPests: document.getElementById('suggPests'),
+  btnRecommend: document.getElementById('btnRecommend'),
+  btnClear: document.getElementById('btnClear'),
+  resContent: document.getElementById('resContent'),
+  resSummary: document.getElementById('resSummary'),
+  safetyNotes: document.getElementById('safetyNotes'),
+  resTitle: document.getElementById('resTitle'),
+  sideTitle: document.getElementById('sideTitle')
+};
+
+// Populate dropdowns / pest list
+function populate(){
+  const D = DATA[LANG];
+  E.title.textContent = D.title;
+  E.subtitle.textContent = D.subtitle;
+  document.getElementById('lblWeather').textContent = D.labels.weather;
+  document.getElementById('lblSoil').textContent = D.labels.soil;
+  document.getElementById('lblOrganic').textContent = D.labels.organic;
+  document.getElementById('lblNutrient').textContent = D.labels.nutrient;
+  document.getElementById('lblStage').textContent = D.labels.stage;
+  document.getElementById('lblPests').textContent = D.labels.pests;
+  E.resTitle.textContent = LANG==='en' ? "Recommendations" : "ପରାମର୍ଶ";
+  E.sideTitle.textContent = LANG==='en' ? "Summary" : "ସାରାଂଶ";
+
+  // helpers
+  function fillSelect(sel, arr){
+    sel.innerHTML = "";
+    arr.forEach(v=>{
+      const opt = document.createElement('option'); opt.value=v; opt.textContent=v; sel.appendChild(opt);
+    });
+  }
+  fillSelect(E.selWeather, D.options.weather);
+  fillSelect(E.selSoil, D.options.soil);
+  fillSelect(E.selOrganic, D.options.organic);
+  fillSelect(E.selNutrient, D.options.nutrient);
+  fillSelect(E.selStage, D.options.stage);
+
+  // pests checkboxes
+  E.selPests.innerHTML = "";
+  D.pestList.forEach((p, i)=>{
+    const id = `pest-${i}`;
+    const row = document.createElement('div');
+    row.style.display='flex'; row.style.alignItems='center'; row.style.gap='8px'; row.style.padding='6px 4px';
+    const cb = document.createElement('input'); cb.type='checkbox'; cb.id=id; cb.value=p;
+    const label = document.createElement('label'); label.htmlFor=id; label.style.userSelect='none';
+    label.textContent = p;
+    row.appendChild(cb); row.appendChild(label);
+    E.selPests.appendChild(row);
+  });
+
+  // clear results
+  E.resContent.innerHTML = LANG==='en' ? 'Fill inputs and click <b>Show Recommendations</b>.' : 'ବିକଳ୍ପ ଭରନ୍ତୁ ଏବଂ "Show Recommendations" ଦବାନ୍ତୁ ।';
+  E.resSummary.textContent = LANG==='en' ? 'No selection yet.' : 'କୌଣସି ପସନ୍ଦ ନାହିଁ।';
+  E.safetyNotes.innerHTML = "";
+}
+populate();
+
+/* Language toggles */
+E.btnEn.addEventListener('click', ()=>{ LANG='en'; E.btnEn.classList.add('active'); E.btnOr.classList.remove('active'); populate();});
+E.btnOr.addEventListener('click', ()=>{ LANG='or'; E.btnOr.classList.add('active'); E.btnEn.classList.remove('active'); populate();});
+
+/* Utility: get selected pests (array of strings, excluding 'None') */
+function getSelectedPests(){
+  const checks = Array.from(E.selPests.querySelectorAll('input[type=checkbox]'));
+  return checks.filter(c=>c.checked).map(c=>c.value).filter(v=>v && !v.toLowerCase().includes('none'));
+}
+
+/* Show Recommendations */
+E.btnRecommend.addEventListener('click', ()=>{
+  const d = DATA[LANG];
+  const weather = E.selWeather.value;
+  const soil = E.selSoil.value;
+  const organic = E.selOrganic.value;
+  const nutrient = E.selNutrient.value;
+  const stage = E.selStage.value;
+  const pests = getSelectedPests();
+
+  // basic validation
+  if(!weather || weather.startsWith('--') || !soil || soil.startsWith('--') || !stage || stage.startsWith('--')){
+    E.resContent.innerHTML = LANG==='en' ? "<b>Please select Weather, Soil and Stage before getting recommendations.</b>" : "<b>ଦୟାକରି ଆବହା, ମାଟି ଓ ଅବସ୍ଥା ଚୟନ କରନ୍ତୁ।</b>";
+    return;
+  }
+
+  // Build results HTML
+  let html = "";
+
+  // 1. Pest Controls (if any selected show their controls; otherwise show likely pests by stage)
+  html += `<div class="section"><h4>🐞 ${LANG==='en' ? 'Pest & Disease Controls' : 'କୀଟ/ରୋଗ ପ୍ରତିରୋଧ ଓ ନିୟନ୍ତ୍ରଣ'}</h4>`;
+  if(pests.length){
+    // explicit pests chosen: show prevention + control
+    pests.forEach(p => {
+      const key = Object.keys(d.rec.pests).find(k => k.toLowerCase().includes(p.split(' ')[0].toLowerCase()) || k === p) || p;
+      const rec = d.rec.pests[key] || d.rec.pests[p] || null;
+      if(rec){
+        html += `<div style="margin-bottom:8px"><b>${p}:</b><ul>`;
+        html += `<li><i>Prevention:</i> ${Array.isArray(rec.prevention) ? rec.prevention.join('; ') : (rec.prevention || '')}</li>`;
+        html += `<li><i>Control:</i> ${Array.isArray(rec.control) ? rec.control.join('; ') : (rec.control || '')}</li>`;
+        html += `</ul></div>`;
+      } else {
+        html += `<div><b>${p}:</b> ${LANG==='en' ? 'Observe & scout; apply integrated measures.' : 'ନିରୀକ୍ଷଣ କରନ୍ତୁ; ସମନ୍ୱିତ ପଦକ୍ଷେପ ନିଆଁ।'}</div>`;
+      }
+    });
+  } else {
+    // no pests selected -> show likely pests for stage
+    html += `<div class="small"><b>${LANG==='en' ? 'Likely pests/diseases for this stage:' : 'ଏହି ଅବସ୍ଥା ପାଇଁ ସମ୍ଭାବ୍ୟ କୀଟ/ରୋଗ:'}</b></div><ul>`;
+    const stageKey = stage;
+    // check English first, if not found try Odia mapping (DATA structure has pestsByStage in english earlier; we use rec.pests keys approximation)
+    // We'll attempt to map by stage to guidance: keep simple and high-value
+    const likely = [];
+    const enRec = DATA.en.recommendations ? DATA.en.recommendations.pestsByStage : null;
+    if(enRec && enRec[stageKey]) {
+      enRec[stageKey].forEach(p => likely.push(p));
+    } else {
+      // fallback: common pests
+      likely.push('Stem Borer','Brown Planthopper (BPH)');
+    }
+    likely.forEach(p => html += `<li>${p} — ${ (DATA.en.recommendations && DATA.en.recommendations.pestControls && DATA.en.recommendations.pestControls[p]) ? DATA.en.recommendations.pestControls[p].join('; ') : (LANG==='en'?'Monitor & use IPM':'ନିରୀକ୍ଷଣ କରନ୍ତୁ') }</li>`);
+    html += `</ul>`;
+  }
+  html += `</div>`;
+
+  // 2. Irrigation advice (combine stage & weather)
+  html += `<div class="section hi"><h4>💧 ${LANG==='en' ? 'Irrigation Strategy' : 'ସିଚାଇ ବ୍ୟୁସ୍ଥା'}</h4>`;
+  const irrStage = d.rec.irrigationByStage[stage] || (LANG==='en' ? 'Standard irrigation for stage.' : 'ଅବସ୍ଥାନୁସାରୀ ସାଧାରଣ ସିଚାଇ।');
+  let irrNote = irrStage;
+  // Adjust for weather specifics
+  if(weather.toLowerCase().includes('hot') || weather.toLowerCase().includes('ଶୁଷ୍କ') ) {
+    irrNote += LANG==='en' ? " Increase frequency; prefer early morning/evening water; use mulching." : " ଝାଲିବା ବେଳେ ପାଣି ବଢାନ୍ତୁ; ମଲ୍ଚିଂ ବ୍ୟବହାର କରନ୍ତୁ।";
+  }
+  if(weather.toLowerCase().includes('flood') || weather.toLowerCase().includes('ବନ୍ୟା')) {
+    irrNote += LANG==='en' ? " Drain & prioritize removing standing water." : " ଡ୍ରେନ୍ ବହୁତ ଆବଶ୍ୟକ।";
+  }
+  if(weather.toLowerCase().includes('rain') || weather.toLowerCase().includes('ବର୍ଷା')) {
+    irrNote += LANG==='en' ? " Reduce irrigation; improve drainage after heavy rains." : " ବର୍ଷା ରୁ ଶେଷ ପରେ ଡ୍ରେନେଜ୍ ବଢାନ୍ତୁ।";
+  }
+
+  html += `<div class="small">${irrNote}</div></div>`;
+
+  // 3. Fertilizer advice (general schedule + nutrient-specific)
+  html += `<div class="section"><h4>🧪 ${LANG==='en' ? 'Fertilizer Advice' : 'ଉର୍ବରକ ସୁପାରିଶ'}</h4>`;
+  html += `<div class="small"><b>${LANG==='en' ? 'General split schedule:' : 'ସାଧାରଣ ବାଣ୍ଟିତ ଅଭିନ୍ୟାସ:'}</b></div><ul>`;
+  html += `<li><b>${LANG==='en' ? 'Basal' : 'ମୂଳ'}</b>: ${d.rec.fertilizerByStage.Basal || ''}</li>`;
+  html += `<li><b>${LANG==='en' ? 'Tillering' : 'ଟିଲରିଂ'}</b>: ${d.rec.fertilizerByStage.Tillering || ''}</li>`;
+  html += `<li><b>${LANG==='en' ? 'Panicle' : 'ପାନିକଲ'}</b>: ${d.rec.fertilizerByStage.Panicle || ''}</li>`;
+  html += `</ul>`;
+
+  if(nutrient && !nutrient.startsWith('--') && nutrient !== (LANG==='en' ? 'None' : 'କିଛି ନାହିଁ')){
+    const fix = (LANG==='en' ? d.rec.nutrientFixes[nutrient] : d.rec.nutrientFixes[nutrient] || d.rec.nutrientFixes[ translateNutrientToEn(nutrient) ]);
+    // For Odia nutrient mapping we provided values in or.rec.nutrientFixes as well
+    let fixText = fix || ( (LANG==='or') ? DATA.or.rec.nutrientFixes[nutrient] : null );
+    if(!fixText && LANG==='en'){
+      fixText = d.rec.nutrientFixes[nutrient] || "Apply recommended nutrient form per soil test.";
+    }
+    html += `<div class="small"><b>${LANG==='en' ? 'Adjustment for deficiency:' : 'ଅଭାବ ପାଇଁ ସମନ୍ୱୟ:'}</b> ${fixText}</div>`;
+  }
+  html += `</div>`;
+
+  // 4. Cultural practices
+  html += `<div class="section"><h4>🌱 ${LANG==='en' ? 'Cultural Practices' : 'ସାଂସ୍କୃତିକ ପଦକ୍ଷେପ'}</h4><ul>`;
+  d.rec.cultural.forEach(c => html += `<li>${c}</li>`);
+  html += `</ul></div>`;
+
+  // 5. Daily Roadmap (if available)
+  html += `<div class="section"><h4>📅 ${LANG==='en' ? 'Daily Roadmap & Tasks' : 'ଦୈନିକ କାର୍ଯ୍ୟ'}</h4>`;
+  const roadmap = (d.rec.dailyRoadmapExample && d.rec.dailyRoadmapExample[stage]) || (LANG==='or' && DATA.or.rec.dailyRoadmapExample && DATA.or.rec.dailyRoadmapExample[stage]);
+  if(roadmap){
+    html += `<ul>`;
+    roadmap.forEach(i => html += `<li>${i}</li>`);
+    html += `</ul>`;
+  } else {
+    html += `<div class="small">${LANG==='en' ? 'Follow stage tasks: irrigation, weeding, scouting, split fertilization.' : 'ଅବସ୍ଥାନୁସାରୀ କାର୍ଯ୍ୟ: ସିଚାଇ, ନିରାଇ, ପରୀକ୍ଷା, ଭାଗେ ଭାଗେ ଉର୍ବରକ।'}</div>`;
+  }
+  html += `</div>`;
+
+  // 6. Safety notes
+  html += `<div class="section hi"><h4>⚠️ ${LANG==='en' ? 'Safety & Notes' : 'ସୁରକ୍ଷା ଓ ଟିପ୍ସ'}</h4><ul>`;
+  (d.rec.safety || []).forEach(s => html += `<li>${s}</li>`);
+  html += `</ul></div>`;
+
+  E.resContent.innerHTML = html;
+
+  // Summary & safety notes side
+  const parts = [];
+  parts.push(`${LANG==='en' ? 'Weather' : 'ଆବହା'}: ${weather}`);
+  parts.push(`${LANG==='en' ? 'Stage' : 'ଅବସ୍ଥା'}: ${stage}`);
+  parts.push(`${LANG==='en' ? 'Soil' : 'ମାଟି'}: ${soil}`);
+  if(nutrient && !nutrient.startsWith('--')) parts.push(`${LANG==='en' ? 'Deficiency' : 'ଅଭାବ'}: ${nutrient}`);
+  if(pests.length) parts.push(`${LANG==='en' ? 'Pests' : 'କୀଟ'}: ${pests.join(', ')}`);
+
+  E.resSummary.innerHTML = parts.join(' • ');
+  E.safetyNotes.innerHTML = `<strong>${LANG==='en' ? 'Safety:' : 'ସୁରକ୍ଷା:'}</strong> ${(d.rec.safety || []).join(' • ')}`;
+});
+
+/* Clear button */
+E.btnClear.addEventListener('click', ()=>{
+  // reset selects and checkboxes
+  ['selWeather','selSoil','selOrganic','selNutrient','selStage'].forEach(id=>document.getElementById(id).selectedIndex = 0);
+  Array.from(E.selPests.querySelectorAll('input[type=checkbox]')).forEach(cb=>cb.checked=false);
+  E.resContent.innerHTML = LANG==='en' ? 'Fill inputs and click <b>Show Recommendations</b>.' : 'ବିକଳ୍ପ ଭରନ୍ତୁ ଏବଂ "Show Recommendations" ଦବାନ୍ତୁ ।';
+  E.resSummary.textContent = LANG==='en' ? 'No selection yet.' : 'କୌଣସି ପସନ୍ଦ ନାହିଁ।';
+  E.safetyNotes.innerHTML = "";
+});
+
+/* small helper to map Odia nutrient names to English key if needed */
+function translateNutrientToEn(n){
+  if(!n) return n;
+  const map = {
+    'ନାଇଟ୍ରୋଜେନ':'Nitrogen','ଫସଫୋରସ୍':'Phosphorus','ପୋଟାସିୟମ୍':'Potassium',
+    'ଜିଙ୍କ୍':'Zinc','ଲୋହା':'Iron'
+  };
+  return map[n] || n;
+}
+</script>
+</body>
+</html>
